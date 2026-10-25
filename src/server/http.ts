@@ -89,7 +89,10 @@ function isSensitiveKey(key: string): boolean {
         normalized.includes('secret') ||
         normalized.includes('password') ||
         normalized.includes('cookie') ||
-        normalized.includes('client-id')
+        normalized.includes('client-id') ||
+        normalized.includes('key') ||
+        normalized === 'data' ||
+        normalized === 'files'
     );
 }
 

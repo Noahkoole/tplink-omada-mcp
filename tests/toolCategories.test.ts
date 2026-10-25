@@ -273,13 +273,13 @@ describe('registerAllTools category filtering', () => {
         registerAllTools(mockServer, mockClient, activeCategories);
 
         expect((mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0);
-        // dashboard read tools are a subset of all 327 tools
+        // dashboard read tools are a subset of all 329 tools
         expect((mockServer.registerTool as ReturnType<typeof vi.fn>).mock.calls.length).toBeLessThan(327);
     });
 
-    it('registers all 327 tools when no activeCategories provided', () => {
+    it('registers all 329 tools when no activeCategories provided', () => {
         registerAllTools(mockServer, mockClient);
-        expect(mockServer.registerTool).toHaveBeenCalledTimes(327);
+        expect(mockServer.registerTool).toHaveBeenCalledTimes(329);
     });
 
     it('registers zero tools when active categories map is empty', () => {
@@ -290,7 +290,7 @@ describe('registerAllTools category filtering', () => {
     it('registers all tools when all:rw is active', () => {
         const { categories: activeCategories } = parseToolCategories('all:rw');
         registerAllTools(mockServer, mockClient, activeCategories);
-        expect(mockServer.registerTool).toHaveBeenCalledTimes(327);
+        expect(mockServer.registerTool).toHaveBeenCalledTimes(329);
     });
 
     it('write-only filter registers only write tools for clients category', () => {
@@ -305,5 +305,18 @@ describe('registerAllTools category filtering', () => {
         const { categories: activeCategories } = parseToolCategories('dashboard:r');
         registerAllTools(mockServer, mockClient, activeCategories);
         expect(loggerModule.logger.info).toHaveBeenCalledWith('Tool categories loaded', expect.objectContaining({ toolCount: expect.any(Number) }));
+    });
+});
+
+describe('generic write permissions', () => {
+    it.each(['all:r', 'generic:r', 'clients:rw'])('does not register callOmadaApi for %s', (filter) => {
+        const server = { registerTool: vi.fn() };
+        registerAllTools(server as unknown as McpServer, {} as OmadaClient, parseToolCategories(filter).categories);
+        expect(server.registerTool.mock.calls.some(([name]) => name === 'callOmadaApi')).toBe(false);
+    });
+    it.each(['all:rw', 'generic:rw', 'generic:w'])('registers callOmadaApi for %s', (filter) => {
+        const server = { registerTool: vi.fn() };
+        registerAllTools(server as unknown as McpServer, {} as OmadaClient, parseToolCategories(filter).categories);
+        expect(server.registerTool.mock.calls.some(([name]) => name === 'callOmadaApi')).toBe(true);
     });
 });

@@ -71,7 +71,8 @@ const networkModule = vi.hoisted(() => {
 const requestModule = vi.hoisted(() => {
     const instance = {
         request: vi.fn().mockResolvedValue({ success: true }),
-    } satisfies { request: ReturnType<typeof vi.fn> };
+        ensureSuccess: vi.fn((response: { result?: unknown }) => response.result),
+    } satisfies { request: ReturnType<typeof vi.fn>; ensureSuccess: ReturnType<typeof vi.fn> };
     const RequestHandler = vi.fn(function () {
         return instance;
     });
@@ -157,5 +158,20 @@ describe('OmadaClient aggregator', () => {
         expect(clientModule.instance.listClients).toHaveBeenCalledWith('s1', undefined);
         expect(networkModule.instance.getPortForwardingStatus).toHaveBeenCalledWith('user', undefined, 1, 10, undefined);
         expect(requestModule.instance.request).toHaveBeenCalledWith({ url: '/path' }, true, undefined);
+    });
+});
+
+it('executes documented operations with the configured controller and default site', async () => {
+    const { OmadaClient } = await import('../../src/omadaClient/index.js');
+    const client = new OmadaClient(baseConfig);
+    requestModule.instance.request.mockResolvedValueOnce({ errorCode: 0, result: { updated: true } });
+    const operation = 'PATCH /openapi/v1/{omadacId}/sites/{siteId}/clients/{clientMac}/ratelimit';
+    await expect(client.callDocumentedApi(operation, { clientMac: 'AA-BB-CC-DD-EE-FF' }, undefined, { mode: 0 })).resolves.toEqual({ updated: true });
+    expect(requestModule.instance.request).toHaveBeenLastCalledWith({
+        method: 'PATCH',
+        url: '/openapi/v1/omadac/sites/default-site/clients/AA-BB-CC-DD-EE-FF/ratelimit',
+        params: undefined,
+        data: { mode: 0 },
+        maxRedirects: 0,
     });
 });

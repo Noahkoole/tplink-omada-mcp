@@ -1981,3 +1981,8 @@ an implementation tracker, and a reference for coding agents.
 | msp | `updateMspUsersBatchTemporaryUsers` | PATCH | Batch modify MSP users. | `/openapi/v1/msp/{mspId}/users/batch-temporary-users` | `docs/openapi/14-msp.json` | `$.paths['/openapi/v1/msp/{mspId}/users/batch-temporary-users'].patch` | ⬜ Not implemented |
 | msp | `updateMspWebhookSettings` | PATCH | Modify MSP webhook setting | `/openapi/v1/msp/{mspId}/webhook/settings/{webhookId}` | `docs/openapi/14-msp.json` | `$.paths['/openapi/v1/msp/{mspId}/webhook/settings/{webhookId}'].patch` | ⬜ Not implemented |
 
+
+
+## General documented OpenAPI access
+
+`getOmadaApiOperations` and `callOmadaApi` use the routes, methods and schemas in the individual `docs/openapi/01-*.json` through `docs/openapi/NN-*.json` references. The executor accepts only an exact documented POST, PUT, PATCH or DELETE operation; it does not infer routes or add undocumented endpoints. API availability and authorization remain controller-enforced.

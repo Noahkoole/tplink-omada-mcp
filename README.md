@@ -119,7 +119,7 @@ Each token is `<category>[:<suffix>]`. Permission suffixes:
 
 ##### Category Reference
 
-Categories marked with `*` are reserved for upcoming phases and have no tool implementations yet. Specifying them will produce a startup warning and they will be skipped. Write tools are currently limited to the `clients` category.
+Categories marked with `*` are reserved for upcoming phases and have no tool implementations yet. Specifying them will produce a startup warning and they will be skipped. Dedicated write tools are in `clients`; the `generic` category exposes documented OpenAPI operations through `callOmadaApi` when write access is enabled.
 
 | Group                   | Categories                                                                    |
 | ----------------------- | ----------------------------------------------------------------------------- |
@@ -132,6 +132,7 @@ Categories marked with `*` are reserved for upcoming phases and have no tool imp
 | VPN                     | `vpn`                                                                         |
 | Profiles & Schedules    | `profiles`, `schedules`, `auth-profiles`                                     |
 | Logs                    | `logs`                                                                        |
+| General API             | `generic` |
 | Controller & Org        | `controller`, `sites`, `maintenance`, `account-users`, `account-sso`*, `account-cloud` |
 | Hotspot                 | `hotspot-portal`*, `hotspot-vouchers`*, `hotspot-users`*                      |
 | Niche                   | `site-templates`*, `voip`*, `olt`*, `msp`*                                    |
@@ -361,7 +362,23 @@ This forwards a public HTTPS URL to `http://localhost:3000` and prints the tunne
 
 In client-credentials mode the server already treats `Mcp-Session-Id` as optional; if the header is removed in transit, requests will still succeed.
 
+## Full OpenAPI write access
+
+Set `OMADA_TOOL_CATEGORIES=all:rw` to enable all read tools and the general OpenAPI executor. To retain read access everywhere but enable only general writes, use `all:r,generic:rw`. The Omada application must also have the appropriate role and site privileges; this does not bypass controller authorization.
+
+Use `getOmadaApiOperations` to search documented POST/PUT/PATCH/DELETE operations, then call it with an exact operation to inspect the input schema. Execute that operation with `callOmadaApi`, passing path parameters, query parameters and the documented JSON body. Controller ID is supplied automatically and site ID defaults to `OMADA_SITE_ID`. Unknown routes and path traversal are rejected; redirects are disabled. Availability and required fields depend on the controller version. Some endpoints require authorization-code mode and cannot be used with client credentials.
+
+The executor is absent from read-only configurations. Requests are not a dry run: operations can change VLANs, wireless settings, firewall rules, VPN configuration, devices, accounts or controller settings, including destructive actions. File-upload endpoints accept a `files` map of field names to `{filename, base64, contentType}` plus optional form fields in `data`. This capability was tested with mocks; no live network writes were performed.
+
 ## Tools
+
+### General OpenAPI access
+
+| Tool | Description |
+| --- | --- |
+| `getOmadaApiOperations` | Search documented operations or inspect their parameters and request schemas. |
+| `callOmadaApi` | Execute a documented OpenAPI operation; requires `generic:w` or `all:rw`. |
+
 
 ### Site & Client
 
@@ -378,7 +395,7 @@ In client-credentials mode the server already treats `Mcp-Session-Id` as optiona
 | `getSiteTemplateConfig` | Get configuration settings for a site template. Requires `siteTemplateId`. |
 | `getSiteTemplateDetail` | Get detailed information about a site template. Requires `siteTemplateId`. |
 | `getSiteTemplateList` | List all site templates configured on the controller. |
-| `listClients` | Lists active client devices for a site. |
+| `listClients` | Lists active client devices for a site using OpenAPI v2 POST with JSON pagination. |
 | `getClient` | [DEPRECATED] Use `listClients` instead. When you have a client MAC, `getClientDetail` is also available. This tool filters the site client list in-process. |
 | `listMostActiveClients` | Gets the most active clients sorted by traffic usage. |
 | `listClientsActivity` | Gets client activity statistics over time. |

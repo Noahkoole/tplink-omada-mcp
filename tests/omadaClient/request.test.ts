@@ -258,6 +258,39 @@ describe('RequestHandler', () => {
     });
 
     describe('fetchPaginated', () => {
+        it('should paginate POST bodies until an empty page when totalRows is omitted', async () => {
+            const { RequestHandler } = await import('../../src/omadaClient/request.js');
+            mockAxiosInstance.request
+                .mockResolvedValueOnce({ data: { errorCode: 0, result: { data: [{ id: 1 }] } } })
+                .mockResolvedValueOnce({ data: { errorCode: 0, result: {} } });
+            const handler = new RequestHandler(mockAxiosInstance as never, mockAuthManager as never);
+
+            await expect(handler.fetchPaginated('/api/items', { filter: 'active' }, undefined, 'POST')).resolves.toEqual([{ id: 1 }]);
+            expect(mockAxiosInstance.request).toHaveBeenCalledTimes(2);
+            expect(mockAxiosInstance.request.mock.calls[1][0]).toEqual({
+                method: 'POST',
+                url: '/api/items',
+                data: { page: 2, pageSize: 200, filter: 'active' },
+                headers: { Authorization: 'AccessToken=test-access-token' },
+            });
+        });
+
+        it('should preserve the POST body and custom headers when retrying authentication', async () => {
+            const { RequestHandler } = await import('../../src/omadaClient/request.js');
+            vi.mocked(axios.isAxiosError).mockReturnValue(true);
+            mockAxiosInstance.request
+                .mockRejectedValueOnce({ response: { status: 401 } })
+                .mockResolvedValueOnce({ data: { errorCode: 0, result: { data: [], totalRows: 0 } } });
+            const handler = new RequestHandler(mockAxiosInstance as never, mockAuthManager as never);
+
+            await expect(handler.fetchPaginated('/api/items', {}, { 'X-Custom-Header': 'value' }, 'POST')).resolves.toEqual([]);
+            expect(mockAuthManager.clearToken).toHaveBeenCalledTimes(1);
+            expect(mockAxiosInstance.request).toHaveBeenCalledTimes(2);
+            expect(mockAxiosInstance.request.mock.calls[1][0]).toEqual(mockAxiosInstance.request.mock.calls[0][0]);
+            expect(mockAxiosInstance.request.mock.calls[1][0].data).toEqual({ page: 1, pageSize: 200 });
+            expect(mockAxiosInstance.request.mock.calls[1][0].headers['X-Custom-Header']).toBe('value');
+        });
+
         it('should fetch all pages until totalRows is reached', async () => {
             const { RequestHandler } = await import('../../src/omadaClient/request.js');
 
@@ -395,4 +428,20 @@ describe('RequestHandler', () => {
             expect(result).toEqual({});
         });
     });
+});
+
+it('redacts credentials in query parameters from request logs', async () => {
+    const { RequestHandler } = await import('../../src/omadaClient/request.js');
+    const { logger } = await import('../../src/utils/logger.js');
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    try {
+        const http = { request: vi.fn().mockResolvedValue({ data: { errorCode: 0, result: {} } }) };
+        const auth = { getAccessToken: vi.fn().mockResolvedValue('test-token') };
+        const handler = new RequestHandler(http as never, auth as never);
+        await handler.get('/api/test', { password: 'secret', public: 'visible' });
+        expect(info).toHaveBeenCalledWith('Omada request', expect.objectContaining({ params: { password: '********', public: 'visible' } }));
+        expect(http.request.mock.calls[0][0].params.password).toBe('secret');
+    } finally {
+        info.mockRestore();
+    }
 });

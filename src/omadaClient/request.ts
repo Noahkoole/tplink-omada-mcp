@@ -50,7 +50,7 @@ export class RequestHandler {
         logger.info('Omada request', {
             method,
             url,
-            params: requestConfig.params,
+            params: this.sanitizePayload(requestConfig.params),
             siteId: requestConfig.params?.siteId ?? undefined,
         });
 
@@ -58,7 +58,7 @@ export class RequestHandler {
             method,
             url,
             headers: this.sanitizeHeaders(requestConfig.headers as AxiosRequestHeaders | undefined),
-            params: requestConfig.params ?? null,
+            params: this.sanitizePayload(requestConfig.params ?? null),
             data: this.sanitizePayload(requestConfig.data),
         });
 
@@ -128,22 +128,24 @@ export class RequestHandler {
     }
 
     /**
-     * Fetch all pages of a paginated API endpoint.
+     * Fetch all pages, using query parameters for GET or a JSON body for POST.
      */
-    public async fetchPaginated<T>(path: string, params: Record<string, unknown> = {}, customHeaders?: CustomHeaders): Promise<T[]> {
+    public async fetchPaginated<T>(
+        path: string,
+        params: Record<string, unknown> = {},
+        customHeaders?: CustomHeaders,
+        method: 'GET' | 'POST' = 'GET'
+    ): Promise<T[]> {
         const records: T[] = [];
         let page = 1;
         let totalRows: number | undefined;
 
         // Fetch sequential pages because OpenAPI requires explicit pagination parameters.
         do {
-            const response = await this.get<OmadaApiResponse<PaginatedResult<T>>>(
-                path,
-                {
-                    ...params,
-                    page,
-                    pageSize: DEFAULT_PAGE_SIZE,
-                },
+            const pagination = { ...params, page, pageSize: DEFAULT_PAGE_SIZE };
+            const response = await this.request<OmadaApiResponse<PaginatedResult<T>>>(
+                { method, url: path, ...(method === 'POST' ? { data: pagination } : { params: pagination }) },
+                true,
                 customHeaders
             );
 
@@ -252,7 +254,10 @@ export class RequestHandler {
             normalized.includes('token') ||
             normalized.includes('secret') ||
             normalized.includes('password') ||
-            normalized.includes('client_id')
+            normalized.includes('client_id') ||
+            normalized.includes('key') ||
+            normalized === 'data' ||
+            normalized === 'files'
         );
     }
 

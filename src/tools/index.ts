@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolCategory, ToolPermission } from '../config.js';
 import type { OmadaClient } from '../omadaClient/index.js';
 import { logger } from '../utils/logger.js';
+import { registerCallOmadaApiTool } from './callOmadaApi.js';
 import { registerDisableClientRateLimitTool } from './disableClientRateLimit.js';
 import { registerGetAccessControlTool } from './getAccessControl.js';
 import { registerGetAclConfigTypeSettingTool } from './getAclConfigTypeSetting.js';
@@ -157,6 +158,7 @@ import { registerGetMeshStatisticsTool } from './getMeshStatistics.js';
 import { registerGetMfaStatusTool } from './getMfaStatus.js';
 import { registerGetMulticastRateLimitTool } from './getMulticastRateLimit.js';
 import { registerGetNtpSettingTool } from './getNtpSetting.js';
+import { registerGetOmadaApiOperationsTool } from './getOmadaApiOperations.js';
 import { registerGetOsgCustomAclListTool } from './getOsgCustomAclList.js';
 import { registerGetOspfInterfaceTool } from './getOspfInterface.js';
 import { registerGetOspfNeighborsTool } from './getOspfNeighbors.js';
@@ -343,6 +345,8 @@ interface ToolEntry {
 }
 
 const TOOL_REGISTRY: ToolEntry[] = [
+    { fn: registerGetOmadaApiOperationsTool, category: 'generic', permission: 'read' },
+    { fn: registerCallOmadaApiTool, category: 'generic', permission: 'write' },
     // --- Sites ---
     { fn: registerListSitesTool, category: 'sites', permission: 'read' },
     { fn: registerGetSiteDetailTool, category: 'sites', permission: 'read' },
