@@ -50,7 +50,7 @@ export class RequestHandler {
         logger.info('Omada request', {
             method,
             url,
-            params: requestConfig.params,
+            params: this.sanitizePayload(requestConfig.params),
             siteId: requestConfig.params?.siteId ?? undefined,
         });
 
@@ -58,7 +58,7 @@ export class RequestHandler {
             method,
             url,
             headers: this.sanitizeHeaders(requestConfig.headers as AxiosRequestHeaders | undefined),
-            params: requestConfig.params ?? null,
+            params: this.sanitizePayload(requestConfig.params ?? null),
             data: this.sanitizePayload(requestConfig.data),
         });
 

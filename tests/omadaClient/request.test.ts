@@ -429,3 +429,19 @@ describe('RequestHandler', () => {
         });
     });
 });
+
+it('redacts credentials in query parameters from request logs', async () => {
+    const { RequestHandler } = await import('../../src/omadaClient/request.js');
+    const { logger } = await import('../../src/utils/logger.js');
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    try {
+        const http = { request: vi.fn().mockResolvedValue({ data: { errorCode: 0, result: {} } }) };
+        const auth = { getAccessToken: vi.fn().mockResolvedValue('test-token') };
+        const handler = new RequestHandler(http as never, auth as never);
+        await handler.get('/api/test', { password: 'secret', public: 'visible' });
+        expect(info).toHaveBeenCalledWith('Omada request', expect.objectContaining({ params: { password: '********', public: 'visible' } }));
+        expect(http.request.mock.calls[0][0].params.password).toBe('secret');
+    } finally {
+        info.mockRestore();
+    }
+});
