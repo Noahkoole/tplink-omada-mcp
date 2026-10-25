@@ -23,7 +23,7 @@ export class ClientOperations {
     constructor(
         private readonly request: RequestHandler,
         private readonly site: SiteOperations,
-        private readonly buildPath: (path: string) => string
+        private readonly buildPath: (path: string, version?: string) => string
     ) {}
 
     /**
@@ -32,9 +32,10 @@ export class ClientOperations {
     public async listClients(siteId?: string, customHeaders?: CustomHeaders): Promise<OmadaClientInfo[]> {
         const resolvedSiteId = this.site.resolveSiteId(siteId);
         return await this.request.fetchPaginated<OmadaClientInfo>(
-            this.buildPath(`/sites/${encodeURIComponent(resolvedSiteId)}/clients`),
+            this.buildPath(`/sites/${encodeURIComponent(resolvedSiteId)}/clients`, 'v2'),
             {},
-            customHeaders
+            customHeaders,
+            'POST'
         );
     }
 
