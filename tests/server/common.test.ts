@@ -106,7 +106,7 @@ describe('server/common', () => {
 
     describe('safeSerialize', () => {
         it('should serialize simple objects', () => {
-            const obj = { key: 'value' };
+            const obj = { label: 'value' };
             expect(safeSerialize(obj)).toBe(JSON.stringify(obj));
         });
 
@@ -431,5 +431,23 @@ describe('server/common', () => {
             expect(logger.warn).toHaveBeenCalledWith('Unhandled request received', expect.objectContaining({ method: 'custom' }));
             expect(logger.warn).toHaveBeenCalledWith('Unhandled notification received', expect.objectContaining({ method: 'notify' }));
         });
+    });
+});
+
+it('redacts generic write bodies, uploaded files and credentials from tool logs', () => {
+    expect(
+        JSON.parse(
+            safeSerialize({
+                operation: 'PUT /api',
+                data: { name: 'Private setting' },
+                files: { file: { base64: 'secret' } },
+                nested: { password: 'secret', wpaKey: 'wifi-secret', token: 'token-secret' },
+            })
+        )
+    ).toEqual({
+        operation: 'PUT /api',
+        data: '[REDACTED]',
+        files: '[REDACTED]',
+        nested: { password: '[REDACTED]', wpaKey: '[REDACTED]', token: '[REDACTED]' },
     });
 });

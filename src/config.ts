@@ -48,6 +48,7 @@ export const ALL_CATEGORIES = [
     'logs',
     // Controller & Org
     'controller',
+    'generic',
     'sites',
     'maintenance',
     'account-users',

@@ -224,3 +224,11 @@ describe('config-validations', () => {
         });
     });
 });
+
+it('encodes API identifiers and rejects empty or unsafe path segments', async () => {
+    const { encodeApiPathParameter } = await import('../../src/utils/config-validations.js');
+    expect(encodeApiPathParameter('AA:BB')).toBe('AA%3ABB');
+    for (const value of ['', '.', '..', 'a/b', '%2F', 'a\\b', 'a?b', 'a#b', 'a b', 'a\n']) {
+        expect(() => encodeApiPathParameter(value)).toThrow('Invalid API path parameter');
+    }
+});

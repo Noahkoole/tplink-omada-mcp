@@ -56,7 +56,9 @@ export function toToolResult(value: unknown): CallToolResult {
 
 export function safeSerialize(value: unknown): string {
     try {
-        return JSON.stringify(value);
+        return JSON.stringify(value, (key, entry) =>
+            /password|passwd|secret|token|authorization|cookie|key|credential|^data$|^files$/i.test(key) ? '[REDACTED]' : entry
+        );
     } catch {
         return '[unserializable]';
     }

@@ -30,4 +30,5 @@ RUN apt-get update \
 COPY package*.json ./
 RUN npm install --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/docs/openapi ./docs/openapi
 CMD ["node", "dist/index.js"]

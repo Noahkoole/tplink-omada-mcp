@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientOperations } from '../../src/omadaClient/client.js';
-import type { RequestHandler } from '../../src/omadaClient/request.js';
-import type { SiteOperations } from '../../src/omadaClient/site.js';
+import { RequestHandler } from '../../src/omadaClient/request.js';
+import { SiteOperations } from '../../src/omadaClient/site.js';
 import type {
     ActiveClientInfo,
     ClientActivity,
@@ -15,7 +15,7 @@ import type {
 describe('omadaClient/client', () => {
     let mockRequest: RequestHandler;
     let mockSite: SiteOperations;
-    let buildPath: (path: string) => string;
+    let buildPath: (path: string, version?: string) => string;
     let clientOps: ClientOperations;
 
     beforeEach(() => {
@@ -30,7 +30,7 @@ describe('omadaClient/client', () => {
             resolveSiteId: vi.fn((siteId) => siteId ?? 'default-site'),
         } as unknown as SiteOperations;
 
-        buildPath = (path: string) => `/api${path}`;
+        buildPath = (path: string, version?: string) => `/api${version ? `/${version}` : ''}${path}`;
 
         clientOps = new ClientOperations(mockRequest, mockSite, buildPath);
     });
@@ -48,7 +48,7 @@ describe('omadaClient/client', () => {
 
             expect(clients).toEqual(mockClients);
             expect(mockSite.resolveSiteId).toHaveBeenCalledWith('test-site');
-            expect(mockRequest.fetchPaginated).toHaveBeenCalledWith('/api/sites/test-site/clients', {}, undefined);
+            expect(mockRequest.fetchPaginated).toHaveBeenCalledWith('/api/v2/sites/test-site/clients', {}, undefined, 'POST');
         });
 
         it('should use default siteId if not provided', async () => {
@@ -58,7 +58,7 @@ describe('omadaClient/client', () => {
             await clientOps.listClients();
 
             expect(mockSite.resolveSiteId).toHaveBeenCalledWith(undefined);
-            expect(mockRequest.fetchPaginated).toHaveBeenCalledWith('/api/sites/default-site/clients', {}, undefined);
+            expect(mockRequest.fetchPaginated).toHaveBeenCalledWith('/api/v2/sites/default-site/clients', {}, undefined, 'POST');
         });
     });
 
@@ -747,6 +747,65 @@ describe('omadaClient/client', () => {
                 undefined
             );
             expect(result).toEqual(mockData);
+        });
+    });
+});
+
+describe('client listing HTTP requests', () => {
+    function setup(defaultSiteId?: string) {
+        const http = { request: vi.fn() };
+        const auth = { getAccessToken: vi.fn().mockResolvedValue('test-token') };
+        const request = new RequestHandler(http as never, auth as never);
+        const buildPath = (path: string, version = 'v1') => `/openapi/${version}/controller-id${path}`;
+        const site = new SiteOperations(request, buildPath, defaultSiteId);
+        return { http, clients: new ClientOperations(request, site, buildPath) };
+    }
+
+    it('posts each page to v2 with JSON pagination and authentication', async () => {
+        const { http, clients } = setup();
+        const firstPage = Array.from({ length: 200 }, (_, i) => ({ mac: `client-${i}` }));
+        const lastPage = [{ mac: 'last-client' }];
+        http.request
+            .mockResolvedValueOnce({ data: { errorCode: 0, result: { data: firstPage, totalRows: 201 } } })
+            .mockResolvedValueOnce({ data: { errorCode: 0, result: { data: lastPage, totalRows: 201 } } });
+
+        await expect(clients.listClients('site/id', { 'X-Custom-Header': 'value' })).resolves.toEqual([...firstPage, ...lastPage]);
+        expect(http.request).toHaveBeenCalledTimes(2);
+        for (const [index, [config]] of http.request.mock.calls.entries()) {
+            expect(config).toEqual({
+                method: 'POST',
+                url: '/openapi/v2/controller-id/sites/site%2Fid/clients',
+                data: { page: index + 1, pageSize: 200 },
+                headers: { Authorization: 'AccessToken=test-token', 'X-Custom-Header': 'value' },
+            });
+        }
+    });
+
+    it('uses the configured site and stops on an empty page', async () => {
+        const { http, clients } = setup('default-site');
+        http.request.mockResolvedValue({ data: { errorCode: 0, result: { data: [], totalRows: 0 } } });
+        await expect(clients.listClients()).resolves.toEqual([]);
+        expect(http.request).toHaveBeenCalledTimes(1);
+        expect(http.request.mock.calls[0][0].url).toBe('/openapi/v2/controller-id/sites/default-site/clients');
+    });
+
+    it('propagates controller errors rather than returning an empty list', async () => {
+        const { http, clients } = setup('default-site');
+        http.request.mockResolvedValue({ data: { errorCode: -1, msg: 'General error.' } });
+        await expect(clients.listClients()).rejects.toThrow('General error.');
+    });
+
+    it('keeps site listing on v1 GET with query pagination', async () => {
+        const { http } = setup();
+        const request = new RequestHandler(http as never, { getAccessToken: vi.fn().mockResolvedValue('test-token') } as never);
+        const sites = new SiteOperations(request, (path) => `/openapi/v1/controller-id${path}`);
+        http.request.mockResolvedValue({ data: { errorCode: 0, result: { data: [], totalRows: 0 } } });
+        await expect(sites.listSites()).resolves.toEqual([]);
+        expect(http.request).toHaveBeenCalledWith({
+            method: 'GET',
+            url: '/openapi/v1/controller-id/sites',
+            params: { page: 1, pageSize: 200 },
+            headers: { Authorization: 'AccessToken=test-token' },
         });
     });
 });

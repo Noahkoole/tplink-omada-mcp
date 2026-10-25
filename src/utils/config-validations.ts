@@ -139,3 +139,11 @@ export function normalizePath(path: string): string {
 
     return startsWithSlash;
 }
+
+/** Encode one API path segment without permitting traversal or encoded separators. */
+export function encodeApiPathParameter(value: string): string {
+    if (!value || value === '.' || value === '..' || /[%/\\?#]/.test(value) || [...value].some((char) => char.charCodeAt(0) <= 32)) {
+        throw new Error('Invalid API path parameter');
+    }
+    return encodeURIComponent(value);
+}

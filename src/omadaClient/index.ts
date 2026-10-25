@@ -13,6 +13,7 @@ import type {
     GetDeviceStatsOptions,
     GetThreatListOptions,
     ListClientsPastConnectionsOptions,
+    OmadaApiResponse,
     OmadaClientInfo,
     OmadaDeviceInfo,
     OmadaDeviceStats,
@@ -33,6 +34,7 @@ import { LogOperations, type LogQueryOptions } from './log.js';
 import { MaintenanceOperations } from './maintenance.js';
 import { MonitorOperations } from './monitor.js';
 import { NetworkOperations } from './network.js';
+import { type ApiFile, prepareOmadaApiRequest } from './openapi.js';
 import { RequestHandler } from './request.js';
 import { ScheduleOperations } from './schedules.js';
 import { SecurityOperations } from './security.js';
@@ -79,8 +81,11 @@ export class OmadaClient {
 
     private readonly omadacId: string;
 
+    private readonly defaultSiteId?: string;
+
     constructor(options: OmadaClientOptions) {
         this.omadacId = options.omadacId;
+        this.defaultSiteId = options.siteId;
 
         const axiosOptions: AxiosRequestConfig = {
             baseURL: options.baseUrl,
@@ -1423,6 +1428,18 @@ export class OmadaClient {
 
     public async getPortSchedulePorts(siteId?: string, customHeaders?: CustomHeaders): Promise<unknown> {
         return await this.scheduleOps.getPortSchedulePorts(siteId, customHeaders);
+    }
+
+    public async callDocumentedApi(
+        operation: string,
+        pathParams: Record<string, string>,
+        query?: Record<string, unknown>,
+        data?: unknown,
+        files?: Record<string, ApiFile>
+    ): Promise<unknown> {
+        const config = prepareOmadaApiRequest(operation, pathParams, query, data, { omadacId: this.omadacId, siteId: this.defaultSiteId }, files);
+        const response = await this.request.request<OmadaApiResponse<unknown>>(config);
+        return this.request.ensureSuccess(response);
     }
 
     // Generic API call
