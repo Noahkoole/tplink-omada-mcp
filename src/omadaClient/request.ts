@@ -128,22 +128,24 @@ export class RequestHandler {
     }
 
     /**
-     * Fetch all pages of a paginated API endpoint.
+     * Fetch all pages, using query parameters for GET or a JSON body for POST.
      */
-    public async fetchPaginated<T>(path: string, params: Record<string, unknown> = {}, customHeaders?: CustomHeaders): Promise<T[]> {
+    public async fetchPaginated<T>(
+        path: string,
+        params: Record<string, unknown> = {},
+        customHeaders?: CustomHeaders,
+        method: 'GET' | 'POST' = 'GET'
+    ): Promise<T[]> {
         const records: T[] = [];
         let page = 1;
         let totalRows: number | undefined;
 
         // Fetch sequential pages because OpenAPI requires explicit pagination parameters.
         do {
-            const response = await this.get<OmadaApiResponse<PaginatedResult<T>>>(
-                path,
-                {
-                    ...params,
-                    page,
-                    pageSize: DEFAULT_PAGE_SIZE,
-                },
+            const pagination = { ...params, page, pageSize: DEFAULT_PAGE_SIZE };
+            const response = await this.request<OmadaApiResponse<PaginatedResult<T>>>(
+                { method, url: path, ...(method === 'POST' ? { data: pagination } : { params: pagination }) },
+                true,
                 customHeaders
             );
 

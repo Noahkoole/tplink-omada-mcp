@@ -16,6 +16,76 @@
         }
     ],
     "paths": {
+        "/openapi/v2/{omadacId}/sites/{siteId}/clients": {
+            "post": {
+                "tags": [
+                    "Client"
+                ],
+                "summary": "Get client list (v2)",
+                "description": "Client-list v2 uses POST with pagination in a JSON body. Verified with a successful controller response and the linked TP-Link guidance.",
+                "externalDocs": {
+                    "description": "TP-Link: v2 uses POST with body pagination",
+                    "url": "https://community.tp-link.com/en/business/threads/topic/862650"
+                },
+                "parameters": [
+                    {
+                        "name": "omadacId",
+                        "in": "path",
+                        "description": "Omada ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "siteId",
+                        "in": "path",
+                        "description": "Site ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "page",
+                                    "pageSize"
+                                ],
+                                "properties": {
+                                    "page": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "pageSize": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 1000
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OperationResponseClientGridVOClient Info"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/openapi/v1/{omadacId}/sites/{siteId}/stat/{deviceMac}/client-stat-5min": {
             "post": {
                 "tags": ["Client Insight"],

@@ -6,6 +6,7 @@ on:
       - "*"
     branches:
       - develop
+      - hotfix/client-list-api-v2
   workflow_dispatch:
 
 concurrency:
@@ -54,6 +55,9 @@ jobs:
           else
             ref_name="${GITHUB_HEAD_REF:-${ref#refs/heads/}}"
             sanitized=$(echo "${ref_name}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+            if [[ "${ref_name}" == "hotfix/client-list-api-v2" ]]; then
+              sanitized="clients-v2"
+            fi
             image_tag="${sanitized}"
             tags="${REGISTRY}/${owner_lower}/tplink-omada-mcp:${sanitized}"
           fi
@@ -83,11 +87,14 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   push-to-dockerhub:
     name: Push to Docker Hub
+    if: github.repository == 'MiguelTVMS/tplink-omada-mcp'
     needs: build-and-push-ghcr
     runs-on: ubuntu-latest
     steps:

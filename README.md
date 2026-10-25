@@ -378,7 +378,7 @@ In client-credentials mode the server already treats `Mcp-Session-Id` as optiona
 | `getSiteTemplateConfig` | Get configuration settings for a site template. Requires `siteTemplateId`. |
 | `getSiteTemplateDetail` | Get detailed information about a site template. Requires `siteTemplateId`. |
 | `getSiteTemplateList` | List all site templates configured on the controller. |
-| `listClients` | Lists active client devices for a site. |
+| `listClients` | Lists active client devices for a site using OpenAPI v2 POST with JSON pagination. |
 | `getClient` | [DEPRECATED] Use `listClients` instead. When you have a client MAC, `getClientDetail` is also available. This tool filters the site client list in-process. |
 | `listMostActiveClients` | Gets the most active clients sorted by traffic usage. |
 | `listClientsActivity` | Gets client activity statistics over time. |
