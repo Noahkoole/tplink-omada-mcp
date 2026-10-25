@@ -2,6 +2,26 @@
 
 The `hotfix/client-list-api-v2` branch uses `POST /openapi/v2/{omadacId}/sites/{siteId}/clients` with JSON pagination. The upstream image will not include this fork's fix until its maintainer releases it.
 
+## Publish and pull from GitHub Container Registry
+
+Enable GitHub Actions on the fork, then run **Publish Docker Images** with branch **hotfix/client-list-api-v2**. Pushes to that branch also trigger publishing. The workflow builds both `linux/amd64` and `linux/arm64`, uses GitHub's automatic `GITHUB_TOKEN` with `packages: write`, and publishes:
+
+```text
+ghcr.io/noahkoole/tplink-omada-mcp:clients-v2
+```
+
+No personal access token or local Docker login is required for this build. Docker Hub publishing is skipped on forks. The published image's source label points to the fork that built it.
+
+After the publishing job succeeds, set the image in the Portainer stack to:
+
+```yaml
+image: ghcr.io/noahkoole/tplink-omada-mcp:clients-v2
+```
+
+If the package is private, add `ghcr.io` to Portainer's registries with credentials that have `read:packages`. Public packages can be pulled without authentication. Package visibility is managed separately from repository visibility. Keep the existing environment variables, ports, and networks, then update the stack and reconnect the MCP client.
+
+## Build locally instead
+
 Build the image on the Docker host managed by your Portainer endpoint (or on every eligible node if you use Swarm):
 
 ```sh
